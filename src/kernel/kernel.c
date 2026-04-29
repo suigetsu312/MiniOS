@@ -1,6 +1,6 @@
-#include "types.h"
-#include "string.h"
-#include "console.h"
+#include "lib/console.h"
+#include "lib/string.h"
+#include "lib/types.h"
 extern char __bss[], __bss_end[], __stack_top[];
 
 
