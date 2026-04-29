@@ -8,3 +8,4 @@
 *.log
 *.pcap
 /build/
+/.codex/
