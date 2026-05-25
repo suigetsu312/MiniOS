@@ -9,6 +9,7 @@ The goal is to build a simple OS for the 32-bit RISC-V platform.
 - [x] Boot a minimal kernel on QEMU
 - [x] Set up basic console output through SBI
 - [x] Understand the linker script and memory layout
+- [x] Understand simple single-core process scheduling and context switching
 - [ ] Learn trap handling
 - [ ] Learn paging
 - [ ] Learn memory management
