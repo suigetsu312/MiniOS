@@ -1,0 +1,6 @@
+-xc
+-std=c11
+--target=riscv32-unknown-elf
+-ffreestanding
+-fno-stack-protector
+-Iinclude
