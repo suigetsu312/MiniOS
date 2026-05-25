@@ -4,12 +4,12 @@ This project aims to learn low-level OS mechanisms through the book *Operating S
 
 The goal is to build a simple OS for the 32-bit RISC-V platform.
 
-## Goals
+## Roadmap
 
 - [x] Boot a minimal kernel on QEMU
 - [x] Set up basic console output through SBI
-- [x] Understand the linker script and memory layout
-- [x] Understand simple single-core process scheduling and context switching
-- [ ] Learn trap handling
-- [ ] Learn paging
-- [ ] Learn memory management
+- [x] Understand the linker script and kernel memory layout
+- [x] Set up basic trap entry and register save/restore
+- [x] Implement simple single-core process creation and cooperative context switching
+- [x] Add a minimal physical page allocator
+- [ ] Build page tables and enable virtual memory
