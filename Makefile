@@ -17,7 +17,8 @@ LDFLAGS := -fuse-ld=lld -nostdlib
 LDFLAGS += --target=$(TARGET)
 LDFLAGS += -Wl,-Tkernel.ld -Wl,-Map=$(KERNEL_MAP)
 
-SRCS := src/kernel/kernel.c src/lib/console.c src/lib/string.c src/platform/sbi.c
+SRCS := src/kernel/kernel.c src/lib/console.c src/lib/string.c
+SRCS += src/platform/sbi.c src/mm/page.c src/kernel/process.c src/kernel/process_test.c src/kernel/scheduler.c
 OBJS := $(patsubst src/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
 
