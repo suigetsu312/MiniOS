@@ -15,17 +15,17 @@ struct task *proc_a;
 struct task *proc_b;
 
 void proc_a_entry(void) {
-    printf("starting process A\n");
+    kprintf("starting process A\n");
     while (1) {
-        putchar('A');
+        // putchar('A');
         schedule();
     }
 }
 
 void proc_b_entry(void) {
-    printf("starting process B\n");
+    kprintf("starting process B\n");
     while (1) {
-        putchar('B');
+        // putchar('B');
         schedule();
     }
 }

@@ -1,7 +1,32 @@
 #include "kernel/kernel.h"
-#include "kernel/process_test.h"
 #include "kernel/scheduler.h"
+#include "kernel/virtio.h"
 extern char __bss[], __bss_end[], __stack_top[];
+
+void handle_syscall(struct trap_frame *f) {
+        switch (f->a3) {
+        case SYS_PUTCHAR:
+            putchar(f->a0);
+            break;
+        case SYS_GETCHAR:
+            while (1) {
+                long ch = getchar();
+                if (ch >= 0) {
+                    f->a0 = ch;
+                    break;
+                }
+                schedule();
+            }
+            break;
+        case SYS_EXIT:
+            kprintf("process %d exited\n", current_process->pid);
+            current_process->state = PROC_EXITED;
+            schedule();
+            PANIC("unreachable");
+        default:
+            PANIC("unexpected syscall a3=%x\n", f->a3);
+    }
+}
 
 void handle_trap(struct trap_frame *f) {
     (void) f;
@@ -9,7 +34,14 @@ void handle_trap(struct trap_frame *f) {
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
 
-    PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    if (scause == SCAUSE_ECALL) {
+        handle_syscall(f);
+        user_pc += 4;
+    } else {
+        PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
+    }
+
+    WRITE_CSR(sepc, user_pc);
 }
 
 __attribute__((naked))
@@ -55,7 +87,7 @@ void kernel_entry(void) {
         "sw a0, 4 * 30(sp)\n"
         
         // Reset the kernel stack.
-        "addi a0, sp, 4 * 31\n"
+        "addi a0, sp, 4 * 32\n"
         "csrw sscratch, a0\n"
 
         "mv a0, sp\n"
@@ -96,19 +128,34 @@ void kernel_entry(void) {
     );
 }
 
+__attribute__((naked)) void user_entry(void) {
+    __asm__ __volatile__(
+        "csrw sepc, %[sepc]        \n"
+        "csrw sstatus, %[sstatus]  \n"
+        "sret                      \n"
+        :
+        : [sepc] "r" (USER_BASE),
+          [sstatus] "r" (SSTATUS_SPIE)
+    );
+}
+
 void kernel_main(void) {
-    // printf("\n\nHello %s\n", "World!");
-    // printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
 
     memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
     WRITE_CSR(stvec, (uint32_t) kernel_entry);
+    virtio_blk_init();
 
-    idle_process = create_process((uint32_t) NULL);
-    idle_process->pid = 0; // idle
+    char buf[SECTOR_SIZE];
+    read_write_disk(buf, 0, false /* read from the disk */);
+    kprintf("first sector: %s\n", buf);
+
+    // strcpy(buf, "hello from kernel!!!\n");
+    // read_write_disk(buf, 0, true /* write to the disk */);
+
+    idle_process = create_process(NULL, 0); // create idle
     current_process = idle_process;
 
-    proc_a = create_process((uint32_t) proc_a_entry);
-    proc_b = create_process((uint32_t) proc_b_entry);
+    create_process(_binary_build_apps_shell_bin_start, (size_t) _binary_build_apps_shell_bin_size);
 
     schedule();
     PANIC("switched to idle process");

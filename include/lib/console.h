@@ -4,6 +4,7 @@
 #include "platform/sbi.h"
 
 void putchar(char ch);
-void printf(const char *fmt, ...);
+long getchar(void);
+void kprintf(const char *fmt, ...);
 
 #endif /* CONSOLE_H */

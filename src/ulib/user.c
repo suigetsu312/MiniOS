@@ -1,16 +1,36 @@
-#include "lib/console.h"
+#include "ulib/user.h"
 #include "lib/types.h"
 
+extern char __stack_top[];
+
+int syscall(int sysno, int arg0, int arg1, int arg2) {
+    register int a0 __asm__("a0") = arg0;
+    register int a1 __asm__("a1") = arg1;
+    register int a2 __asm__("a2") = arg2;
+    register int a3 __asm__("a3") = sysno;
+
+    __asm__ __volatile__("ecall"
+                         : "=r"(a0)
+                         : "r"(a0), "r"(a1), "r"(a2), "r"(a3)
+                         : "memory");
+
+    return a0;
+}
+
+__attribute__((noreturn)) void exit(void) {
+    syscall(SYS_EXIT, 0, 0, 0);
+    for (;;); // Just in case!
+}
+
+int getchar(void) {
+    return syscall(SYS_GETCHAR, 0, 0, 0);
+}
+
 void putchar(char ch) {
-    sbi_call(ch, 0, 0, 0, 0, 0, 0, 1 /* Console Putchar */);
+    syscall(SYS_PUTCHAR, ch,0,0);
 }
 
-long getchar(void) {
-    struct sbiret ret = sbi_call(0, 0, 0, 0, 0, 0, 0, 2);
-    return ret.error;
-}
-
-void kprintf(const char *fmt, ...)
+void printf(const char *fmt, ...)
 {
     va_list vargs;
     va_start(vargs, fmt);
@@ -70,4 +90,15 @@ void kprintf(const char *fmt, ...)
 end:
     va_end(vargs);
 
+}
+
+__attribute__((section(".text.start")))
+__attribute__((naked))
+void start(void) {
+    __asm__ __volatile__(
+        "mv sp, %[stack_top] \n"
+        "call main           \n"
+        "call exit           \n"
+        :: [stack_top] "r" (__stack_top)
+    );
 }

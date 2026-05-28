@@ -12,6 +12,7 @@ struct task {
     int pid;
     int state;
     vaddr_t sp;
+    uint32_t *page_table;
     uint8_t stack[8192];
 };
 
@@ -20,6 +21,5 @@ extern struct task processes[MAX_PROCESSES];
 __attribute__((naked)) void switch_context(uint32_t *prev_sp,
                                            uint32_t *next_sp);
 
-struct task *create_process(uint32_t pc);
-
+struct task *create_process(const void *image, size_t image_size);
 #endif /* PROCESS_H */

@@ -1,6 +1,8 @@
 #include "kernel/process.h"
 #include "kernel/kernel.h"
+#include "kernel/virtio.h"
 struct task processes[MAX_PROCESSES];
+extern char __free_ram[], __free_ram_end[], __kernel_base[];
 
 __attribute__((naked)) void switch_context(uint32_t *prev_sp,
                                            uint32_t *next_sp)
@@ -42,7 +44,7 @@ __attribute__((naked)) void switch_context(uint32_t *prev_sp,
     );
 }
 
-struct task *create_process(uint32_t pc)
+struct task *create_process(const void *image, size_t image_size)
 {
     struct task *tk = NULL;
     int i;
@@ -70,10 +72,30 @@ struct task *create_process(uint32_t pc)
     *--sp = 0;
     *--sp = 0;
     *--sp = 0;
-    *--sp = pc;
+    *--sp = (uint32_t) user_entry;  // ra (changed!)
 
-    tk->pid = i + 1;
+    uint32_t *page_table = (uint32_t *) alloc_pages(1);
+    for (paddr_t paddr = (paddr_t) __kernel_base;
+         paddr < (paddr_t) __free_ram_end; paddr += PAGE_SIZE)
+        map_page(page_table, paddr, paddr, PAGE_R | PAGE_W | PAGE_X);
+
+    map_page(page_table, VIRTIO_BLK_PADDR, VIRTIO_BLK_PADDR, PAGE_R | PAGE_W); // new
+
+    // Map user pages.
+    for (uint32_t off = 0; off < image_size; off += PAGE_SIZE) {
+        paddr_t page = alloc_pages(1);
+        // Handle the case where the data to be copied is smaller than the
+        // page size.
+        size_t remaining = image_size - off;
+        size_t copy_size = PAGE_SIZE <= remaining ? PAGE_SIZE : remaining;
+        // Fill and map the page.
+        memcpy((void *) page, image + off, copy_size);
+        map_page(page_table, USER_BASE + off, page, PAGE_U | PAGE_R | PAGE_W | PAGE_X);
+    }
+
+    tk->pid = i;
     tk->state = PROCESS_RUNNING;
     tk->sp = (uint32_t) sp;
+    tk->page_table = page_table;
     return tk;
 }
